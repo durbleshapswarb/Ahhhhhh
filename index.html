@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>File Stitcher</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #111; color: #fff; text-align: center; padding: 50px 20px; }
+  h1 { font-size: 24px; }
+  #status { margin: 20px 0; font-size: 18px; color: #8fd3ff; }
+  button { background: #8fd3ff; color: #111; border: none; padding: 15px 30px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; display: none; }
+  button:hover { background: #6bb8e6; }
+  progress { width: 100%; max-width: 400px; height: 20px; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+  <h1>Hollow Knight Stitcher</h1>
+  <div id="status">Starting...</div>
+  <progress id="progress-bar" value="0" max="57"></progress>
+  <br><br>
+  <button id="download-btn" onclick="downloadFile()">Download Hollow-Knight-AnkerGames.zip</button>
+
+<script>
+  const baseName = "Hollow-Knight-AnkerGames.zip";
+  const totalParts = 57;
+  let buffers = [];
+  let mergedBlobUrl = null;
+
+  async function startStitching() {
+    const statusEl = document.getElementById('status');
+    const progressEl = document.getElementById('progress-bar');
+
+    for (let i = 1; i <= totalParts; i++) {
+      // Pad the number (e.g., 1 becomes "01")
+      const partNum = String(i).padStart(2, '0');
+      const fileName = `${baseName}.part${partNum}`;
+      
+      statusEl.innerText = `Fetching ${fileName} (${i}/${totalParts})...`;
+      
+      try {
+        // Fetch the file from the same directory
+        const response = await fetch(fileName);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const arrayBuffer = await response.arrayBuffer();
+        buffers.push(arrayBuffer);
+        
+        progressEl.value = i;
+      } catch (error) {
+        statusEl.innerText = `ERROR: Could not load ${fileName}. Make sure the file is in the same folder and named exactly right.`;
+        statusEl.style.color = '#fa7777';
+        return;
+      }
+    }
+
+    statusEl.innerText = `All parts loaded! Creating ZIP file...`;
+    statusEl.style.color = '#51c982';
+    
+    // Combine all the buffers into one giant blob
+    const finalBlob = new Blob(buffers, { type: 'application/zip' });
+    mergedBlobUrl = URL.createObjectURL(finalBlob);
+    
+    statusEl.innerText = `Done! Ready to download.`;
+    document.getElementById('download-btn').style.display = 'inline-block';
+  }
+
+  function downloadFile() {
+    if (!mergedBlobUrl) return;
+    const a = document.createElement('a');
+    a.href = mergedBlobUrl;
+    a.download = baseName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  // Start automatically when the page loads
+  window.onload = startStitching;
+</script>
+
+</body>
+</html>
